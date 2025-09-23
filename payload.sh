@@ -1,6 +1,6 @@
 #!/bin/sh
 # SharkJack payload by Hackazillarex : Proof-of-entry scan with OS, ports, and services
-# Public IP + first 5 live hosts, top 10 ports
+# Public IP + first 3 live hosts, top 10 ports
 # LED blinks while scanning, solid green when done
 
 LOOT_DIR=/root/loot
@@ -52,7 +52,7 @@ fetch_public_ip() {
     echo "$PUBLIC_IP" > "$LOOT_DIR/public_ip.txt"
 }
 
-get_first_5_live_hosts() {
+get_first_3_live_hosts() {
     IPADDR=$(ip -4 addr show eth0 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1)
     NETPREFIX=$(echo $IPADDR | awk -F. '{print $1"."$2}')
     LIVE_HOSTS=""
@@ -63,13 +63,13 @@ get_first_5_live_hosts() {
             ping -c 1 -W 1 "$HOST" >/dev/null 2>&1 || continue
             LIVE_HOSTS="$LIVE_HOSTS $HOST"
             COUNT=$((COUNT+1))
-            [ $COUNT -eq 5 ] && break 2
+            [ $COUNT -eq 3 ] && break 2
         done
     done
     echo "$LIVE_HOSTS"
 }
 
-scan_first_5_hosts() {
+scan_first_3_hosts() {
     HOSTS="$1"
     TMPFILE=$(mktemp)
     log "Running detailed scan on hosts: $HOSTS"
@@ -93,9 +93,9 @@ scan_first_5_hosts() {
     }
     /^OS details: /{os=substr($0, 12)}
     /^[0-9]+\/tcp /{
-        split($0,f," "); 
-        portnum=f[1]; service=f[3]; 
-        ports=(ports?ports";"portnum:portnum); 
+        split($0,f," ");
+        portnum=f[1]; service=f[3];
+        ports=(ports?ports";"portnum:portnum);
         services=(services?services";"service:service)
     }
     END{ if(ip!="" && ports!=""){ print ip " | " os " | " ports " | " services } }
@@ -115,11 +115,11 @@ log_latest "Scan started at $TIMESTAMP"
 fetch_public_ip
 require_nmap_or_exit
 
-FIRST_5_HOSTS=$(get_first_5_live_hosts)
-log "Running detailed scan on hosts: $FIRST_5_HOSTS"
-[ -z "$FIRST_5_HOSTS" ] && log "No live hosts found" && exit 0
+FIRST_3_HOSTS=$(get_first_3_live_hosts)
+log "Running detailed scan on hosts: $FIRST_3_HOSTS"
+[ -z "$FIRST_3_HOSTS" ] && log "No live hosts found" && exit 0
 
-scan_first_5_hosts "$FIRST_5_HOSTS"
+scan_first_3_hosts "$FIRST_3_HOSTS"
 
 led_blink_stop
 led_done
